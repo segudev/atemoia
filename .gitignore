@@ -3,6 +3,7 @@ target/
 .DS_Store
 .cpcache/
 .calva/
+.clj-kondo/
 .lsp/
 .shadow-cljs/
 .idea/
