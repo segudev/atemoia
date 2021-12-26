@@ -1,6 +1,7 @@
 (ns atemoia.server
   (:gen-class)
-  (:require [cheshire.core :as json]
+  (:require [atemoia.parsing :as parse]
+            [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as string]
@@ -37,7 +38,7 @@
                [:meta {:name    "viewport"
                        :content "width=device-width, initial-scale=1.0"}]
                [:meta {:name    "theme-color"
-                       :content "#000000"}]
+                       :content "#FFFFF"}]
                [:meta {:name    "description"
                        :content "A simple full-stack clojure app"}]
                [:title "atemoia"]]
@@ -79,11 +80,21 @@
     ["CREATE TABLE todo (id serial, note text)"])
   {:status 202})
 
+(defn af-get
+  [request]
+  {:body    (-> (get-in request [:query-params :page])
+                Integer/valueOf
+                parse/current-annonces
+                json/generate-string)
+   :headers {"Content-Type" "application/json"}
+   :status  200})
+
 (def routes
   `#{["/" :get index]
      ["/todo" :get list-todo]
      ["/todo" :post create-todo]
-     ["/install-schema" :post install-schema]})
+     ["/install-schema" :post install-schema]
+     ["/af" :get af-get]})
 
 (defonce state
   (atom nil))

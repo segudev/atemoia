@@ -4,7 +4,10 @@
            io.pedestal/pedestal.jetty        {:mvn/version "0.5.9"}
            io.pedestal/pedestal.service      {:mvn/version "0.5.9"}
            org.clojure/clojure               {:mvn/version "1.10.3"}
-           org.postgresql/postgresql         {:mvn/version "42.2.23"}}
+           org.postgresql/postgresql         {:mvn/version "42.2.23"}
+           clj-http/clj-http                 {:mvn/version "3.12.3"}
+           hickory/hickory                   {:mvn/version "0.7.1"}}
+
  :aliases {:dev {:extra-paths ["dev" "test"]
                  :extra-deps  {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
                                                               :sha     "1e7c019730dc6f9e38793170c8801c5950516b60"}

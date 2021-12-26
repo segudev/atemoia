@@ -6,15 +6,15 @@
 
 (defn fetch-todos
   []
-  (-> (js/fetch "/todo")
+  (-> (js/fetch "/af?page=0")
     (.then (fn [response]
              (when-not (.-ok response)
                (throw (ex-info (.-statusText response)
                         {:response response})))
              (swap! state dissoc :error)
              (.json response)))
-    (.then (fn [todos]
-             (swap! state assoc :todos (js->clj todos
+    (.then (fn [items]
+             (swap! state assoc :todos (js->clj items
                                          :keywordize-keys true))))
     (.catch (fn [ex]
               (swap! state assoc :error (ex-message ex))))))
@@ -23,47 +23,11 @@
   []
   (let [{:keys [error todos]} @state]
     [:div
-     [:p "This is a sample clojure app to demonstrate how to use "
-      [:a {:href "https://clojure.org/guides/tools_build"}
-       "tools.build"]
-      " to create and deploy a full-stack clojure app."]
-     [:p "Checkout our "
-      [:a {:href "https://github.com/souenzzo/atemoia"}
-       "README"]]
-     [:form
-      {:on-submit (fn [^js evt]
-                    (.preventDefault evt)
-                    (let [el (-> evt
-                               .-target
-                               .-elements
-                               .-note)
-                          json-body #js{:note (.-value el)}
-                          unlock (fn [success?]
-                                   (fetch-todos)
-                                   (when success?
-                                     (set! (.-value el) ""))
-                                   (set! (.-disabled el) false))]
-                      (set! (.-disabled el) true)
-                      (-> (js/fetch "/todo" #js{:method "POST"
-                                                :body   (js/JSON.stringify json-body)})
-                        (.then (fn [response]
-                                 (unlock (.-ok response))))
-                        (.catch (fn [ex]
-                                  (unlock false))))))}
-      [:label
-       "note: "
-       [:input {:name "note"}]]]
-     (when error
-       [:<>
-        [:pre (str error)]
-        [:button {:on-click (fn []
-                              (js/fetch "/install-schema"
-                                #js{:method "POST"}))}
-         "install schema"]])
+     (when error [:<>[:pre (str error)] "Error"])
      [:ul
-      (for [{:todo/keys [id note]} todos]
-        [:li {:key id}
-         note])]]))
+      (for [i todos]
+        [:li
+         (get i :title)])]]))
 
 (defn start
   []
