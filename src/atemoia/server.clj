@@ -6,6 +6,7 @@
             [clojure.java.io :as io]
             [clojure.string :as string]
             [hiccup2.core :as h]
+            [hiccup.page :as p]
             [io.pedestal.http :as http]
             [io.pedestal.http.route :as route]
             [io.pedestal.interceptor :as interceptor]
@@ -35,10 +36,11 @@
               [:head
                [:meta {:charset "UTF-8"}]
                [:link {:rel "icon" :href "data:"}]
+               (p/include-css "/atemoia/styles.css")
                [:meta {:name    "viewport"
                        :content "width=device-width, initial-scale=1.0"}]
                [:meta {:name    "theme-color"
-                       :content "#FFFFF"}]
+                       :content "#00000"}]
                [:meta {:name    "description"
                        :content "A simple full-stack clojure app"}]
                [:title "atemoia"]]

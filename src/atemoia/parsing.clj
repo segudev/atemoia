@@ -2,8 +2,7 @@
   (:require [hickory.core :as h]
             [hickory.select :as s]
             [clj-http.client :as client]
-            [clojure.string :as string])
-  (:gen-class))
+            [clojure.string :as string]))
 
 (def DOMAIN "https://fr.audiofanzine.com")
 (def ENDPOINT "/synthetiseur/petites-annonces")
@@ -77,7 +76,7 @@
     (replace-and-trim place "-")))
 
 (defn timeplace [annonce]
-  (let [time (af-back.parsing/hour annonce)]
+  (let [time (hour annonce)]
     (if-let [place (place annonce)]
       (str time " - " place)
       time)))
