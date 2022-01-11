@@ -89,19 +89,19 @@
   (zipmap [:id :img :title :link :price :timeplace :summary]
           ((juxt id img title link price timeplace summary) annonce)))
 
- (defn assoc-hash [obj]
+ #_(defn assoc-hash [obj]
    {:hash (hash obj) :annonce obj})
 
 (defn current-annonces [page]
-  (mapv (comp assoc-hash parse-annonce)
+  (mapv (partial parse-annonce)
        (extract-annonces (af-selling page))))
 
 ; Synchronously parse reducing on page range
 (defn parse-range [start end]
-  (reduce (fn [res next]
+  (set (reduce (fn [res next]
             (concat res (current-annonces next)))
           []
-          (range start end)))
+          (range start end))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; (defn test-parser [parser]

@@ -22,11 +22,11 @@
   (let [uri (URI/create database-url)
         creds (.getUserInfo uri)
         base-uri (URI. "postgresql" nil
-                   (.getHost uri) (.getPort uri) (.getPath uri)
-                   (string/join "&"
-                     (map (partial string/join "=")
-                       (zipmap ["user" "password"] (string/split creds #":" 2))))
-                   nil)]
+                       (.getHost uri) (.getPort uri) (.getPath uri)
+                       (string/join "&"
+                                    (map (partial string/join "=")
+                                         (zipmap ["user" "password"] (string/split creds #":" 2))))
+                       nil)]
     (str (URI. "jdbc" (str base-uri) nil))))
 
 (defn index
@@ -49,8 +49,8 @@
                [:script
                 {:src "/atemoia/main.js"}]]]]
     {:body    (->> html
-                (h/html {:mode :html})
-                (str "<!DOCTYPE html>\n"))
+                   (h/html {:mode :html})
+                   (str "<!DOCTYPE html>\n"))
      :headers {"Content-Security-Policy" ""
                "Content-Type"            "text/html"}
      :status  200}))
@@ -58,7 +58,7 @@
 (defn list-todo
   [{::keys [atm-conn]}]
   (let [response (jdbc/execute! atm-conn
-                   ["SELECT * FROM todo"])]
+                                ["SELECT * FROM todo"])]
     {:body    (json/generate-string response)
      :headers {"Content-Type" "application/json"}
      :status  200}))
@@ -67,30 +67,32 @@
   [{::keys [atm-conn]
     :keys  [body]}]
   (let [note (some-> body
-               io/reader
-               (json/parse-stream true)
-               :note)]
+                     io/reader
+                     (json/parse-stream true)
+                     :note)]
     (jdbc/execute! atm-conn
-      ["INSERT INTO todo (note) VALUES (?);
+                   ["INSERT INTO todo (note) VALUES (?);
         DELETE FROM todo WHERE id IN (SELECT id FROM todo ORDER BY id DESC OFFSET 10)"
-       note])
+                    note])
     {:status 201}))
 
 (defn install-schema
   [{::keys [atm-conn]}]
   (jdbc/execute! atm-conn
-    ["CREATE TABLE todo (id serial, note text)"])
+                 ["CREATE TABLE todo (id serial, note text)"])
   {:status 202})
 
 (defn af-get
   [request]
-  {:body    (-> (get-in request [:query-params :page])
-                Integer/valueOf
-                parse/current-annonces
-                json/generate-string)
+  {:body    (let [page (-> (get-in request [:query-params :page])
+                            Integer/valueOf)]
+                (-> (parse/parse-range 1 page)
+                    json/generate-string))
    :headers {"Content-Type" "application/json"}
    :status  200})
 
+(spit "./range2.json" (-> (parse/parse-range 1 10)
+                          json/generate-string))
 (def routes
   `#{["/" :get index]
      ["/todo" :get list-todo]
@@ -104,49 +106,49 @@
 (defn -main
   [& _]
   (let [port (or (edn/read-string (System/getenv "PORT"))
-               8080)
+                 8080)
         database-url (or (System/getenv "DATABASE_URL")
-                       "postgres://postgres:postgres@127.0.0.1:5432/postgres")
+                         "postgres://postgres:postgres@127.0.0.1:5432/postgres")
         jdbc-url (database->jdbc-url database-url)]
     (swap! state
-      (fn [st]
-        (some-> st http/stop)
-        (-> {::http/port              port
-             ::http/file-path         "target/classes/public"
-             ::http/resource-path     "public"
-             ::http/host              "0.0.0.0"
-             ::http/type              :jetty
-             ::http/routes            (fn []
-                                        (route/expand-routes routes))
-             ::http/join?             false
-             ::http/container-options {:context-configurator (fn [^ServletContextHandler context]
-                                                               (let [gzip-handler (GzipHandler.)]
-                                                                 (.addIncludedMethods gzip-handler (into-array ["GET" "POST"]))
-                                                                 (.setExcludedAgentPatterns gzip-handler (make-array String 0))
-                                                                 (.setGzipHandler context gzip-handler))
-                                                               context)}}
+           (fn [st]
+             (some-> st http/stop)
+             (-> {::http/port              port
+                  ::http/file-path         "target/classes/public"
+                  ::http/resource-path     "public"
+                  ::http/host              "0.0.0.0"
+                  ::http/type              :jetty
+                  ::http/routes            (fn []
+                                             (route/expand-routes routes))
+                  ::http/join?             false
+                  ::http/container-options {:context-configurator (fn [^ServletContextHandler context]
+                                                                    (let [gzip-handler (GzipHandler.)]
+                                                                      (.addIncludedMethods gzip-handler (into-array ["GET" "POST"]))
+                                                                      (.setExcludedAgentPatterns gzip-handler (make-array String 0))
+                                                                      (.setGzipHandler context gzip-handler))
+                                                                    context)}}
 
-          http/default-interceptors
-          (update ::http/interceptors
-            (partial cons
-              (interceptor/interceptor {:enter (fn [ctx]
-                                                 (-> ctx
-                                                   (assoc-in [:request
-                                                              ::atm-conn
-                                                              :jdbcUrl]
-                                                     jdbc-url)))})))
-          http/dev-interceptors
-          http/create-server
-          http/start)))
+                 http/default-interceptors
+                 (update ::http/interceptors
+                         (partial cons
+                                  (interceptor/interceptor {:enter (fn [ctx]
+                                                                     (-> ctx
+                                                                         (assoc-in [:request
+                                                                                    ::atm-conn
+                                                                                    :jdbcUrl]
+                                                                                   jdbc-url)))})))
+                 http/dev-interceptors
+                 http/create-server
+                 http/start)))
     (println "started: " port)))
 
 (defn dev-main
   [& _]
   ;; docker run --name my-postgres --env=POSTGRES_PASSWORD=postgres --rm -p 5432:5432 postgres:alpine
   (-> `shadow.cljs.devtools.server/start!
-    requiring-resolve
-    (apply []))
+      requiring-resolve
+      (apply []))
   (-> `shadow.cljs.devtools.api/watch
-    requiring-resolve
-    (apply [:atemoia]))
+      requiring-resolve
+      (apply [:atemoia]))
   (-main))
