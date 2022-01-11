@@ -6,7 +6,7 @@
 
 (defn fetch-todos
   []
-  (-> (js/fetch "/af?page=11")
+  (-> (js/fetch "/af")
       (.then (fn [response]
                (when-not (.-ok response)
                  (throw (ex-info (.-statusText response)

@@ -82,16 +82,21 @@
                  ["CREATE TABLE todo (id serial, note text)"])
   {:status 202})
 
+(defonce state
+  (atom nil))
+
 (defn af-get
-  [request]
-  {:body    (let [page (-> (get-in request [:query-params :page])
-                            Integer/valueOf)]
+  [_]
+  {:body   (-> (:results @state)
+               json/generate-string) #_(let [page (-> (get-in request [:query-params :page])
+                             Integer/valueOf)]
                 (-> (parse/parse-range 1 page)
                     json/generate-string))
+  
    :headers {"Content-Type" "application/json"}
    :status  200})
 
-(spit "./range2.json" (-> (parse/parse-range 1 10)
+#_(spit "./range2.json" (-> (parse/parse-range 1 10)
                           json/generate-string))
 (def routes
   `#{["/" :get index]
@@ -99,9 +104,6 @@
      ["/todo" :post create-todo]
      ["/install-schema" :post install-schema]
      ["/af" :get af-get]})
-
-(defonce state
-  (atom nil))
 
 (defn -main
   [& _]
@@ -126,7 +128,8 @@
                                                                       (.addIncludedMethods gzip-handler (into-array ["GET" "POST"]))
                                                                       (.setExcludedAgentPatterns gzip-handler (make-array String 0))
                                                                       (.setGzipHandler context gzip-handler))
-                                                                    context)}}
+                                                                    context)}
+                  :results (parse/parse-range 1 11)}
 
                  http/default-interceptors
                  (update ::http/interceptors
