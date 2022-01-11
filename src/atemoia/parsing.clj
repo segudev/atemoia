@@ -1,8 +1,8 @@
 (ns atemoia.parsing
   (:require [hickory.core :as h]
             [hickory.select :as s]
-            [clj-http.client :as client]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [clojure.core.async :as async]))
 
 (def DOMAIN "https://fr.audiofanzine.com")
 (def ENDPOINT "/synthetiseur/petites-annonces")
@@ -11,8 +11,7 @@
   (str DOMAIN ENDPOINT (format "/p.%d.html" page)))
 
 (defn af-selling [page]
-  (-> (client/get (url page) {:insecure? true})
-      :body
+  (-> (slurp (url page))
       h/parse
       h/as-hickory))
 
@@ -41,14 +40,14 @@
    #" 2x" ""))
 
 (defn img [annonce]
-  (if-let [url (-> (s/select 
+  (if-let [url (some-> (s/select 
                     (s/class "playlist-row-thumbnail") 
                     annonce)
                    first :content first :content first :attrs :srcset)]
     (sanitize-img-url url)))
 
 (defn title [annonce]
-  (-> (s/select (s/class "playlist-row-title")
+  (some-> (s/select (s/class "playlist-row-title")
                 annonce)
       first :content first))
 
@@ -58,7 +57,7 @@
                   first :attrs :href)))
 
 (defn price [annonce]
-  (-> (s/select (s/class "playlist-price")
+  (some-> (s/select (s/class "playlist-price")
                 annonce)
       first :content first sanitize-price))
 
@@ -66,12 +65,12 @@
   (string/trim (string/replace sentence (str char " ") "")))
 
 (defn hour [annonce]
-  (-> (s/select (s/class "playlist-row-meta")
+  (some-> (s/select (s/class "playlist-row-meta")
                 annonce)
       first :content first :content last (replace-and-trim "à")))
 
 (defn place [annonce]
-  (if-let [place (-> (s/select (s/class "playlist-row-meta") annonce)
+  (if-let [place (some-> (s/select (s/class "playlist-row-meta") annonce)
                      first :content second :content first)]
     (replace-and-trim place "-")))
 
@@ -90,10 +89,19 @@
   (zipmap [:id :img :title :link :price :timeplace :summary]
           ((juxt id img title link price timeplace summary) annonce)))
 
+ (defn assoc-hash [obj]
+   {:hash (hash obj) :annonce obj})
+
 (defn current-annonces [page]
-  (map (partial parse-annonce)
+  (mapv (comp assoc-hash parse-annonce)
        (extract-annonces (af-selling page))))
 
+; Synchronously parse reducing on page range
+(defn parse-range [start end]
+  (reduce (fn [res next]
+            (concat res (current-annonces next)))
+          []
+          (range start end)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; (defn test-parser [parser]

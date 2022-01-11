@@ -4,8 +4,8 @@
            io.pedestal/pedestal.jetty        {:mvn/version "0.5.9"}
            io.pedestal/pedestal.service      {:mvn/version "0.5.9"}
            org.clojure/clojure               {:mvn/version "1.10.3"}
+           org.clojure/core.async            {:mvn/version "1.5.648"}
            org.postgresql/postgresql         {:mvn/version "42.2.23"}
-           clj-http/clj-http                 {:mvn/version "3.12.3"}
            hickory/hickory                   {:mvn/version "0.7.1"}}
 
  :aliases {:dev {:extra-paths ["dev" "test"]
