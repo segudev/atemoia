@@ -29,11 +29,12 @@
 
 (defn map-idx 
   [idx item]
-  (let [{:keys [:id :img :title :link :price :timeplace :summary]} item]
+  (let [{:keys [:id :img :title :link :price :time :place :summary]} item]
     ^{:key id} 
-    [:div.container
+    [:div.container 
+     [:div.time (str time " - "place)]
       [:a {:href link} [:img.image {:src img}] 
-       [:div.middle 
+       [:div.middle
         [:div.text price "€"]]]]
     ))
 

@@ -6,7 +6,8 @@
            org.clojure/clojure               {:mvn/version "1.10.3"}
            org.clojure/core.async            {:mvn/version "1.5.648"}
            org.postgresql/postgresql         {:mvn/version "42.2.23"}
-           hickory/hickory                   {:mvn/version "0.7.1"}}
+           hickory/hickory                   {:mvn/version "0.7.1"}
+           jarohen/chord                     {:mvn/version "0.8.1"}}
 
  :aliases {:dev {:extra-paths ["dev" "test"]
                  :extra-deps  {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"

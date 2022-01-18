@@ -9,6 +9,9 @@
             [hiccup.page :as p]
             [io.pedestal.http :as http]
             [io.pedestal.http.route :as route]
+            [io.pedestal.http.sse :as sse]
+            [clojure.core.async :as async]
+            [clojure.core.async.impl.protocols :as chan]
             [io.pedestal.interceptor :as interceptor]
             [next.jdbc :as jdbc])
   (:import (java.net URI)
@@ -16,6 +19,11 @@
            (org.eclipse.jetty.server.handler.gzip GzipHandler)))
 
 (set! *warn-on-reflection* true)
+
+(extend-protocol cheshire.generate/JSONable
+  java.time.LocalDateTime
+  (to-json [dt gen]
+    (cheshire.generate/write-string gen (str dt))))
 
 (defn database->jdbc-url
   [database-url]
@@ -87,14 +95,24 @@
 
 (defn af-get
   [_]
-  {:body   (-> (:results @state)
-               json/generate-string) #_(let [page (-> (get-in request [:query-params :page])
+  {:body   (->> (:results @state)
+               (sort-by :time)
+               reverse
+               json/generate-string) 
+   #_(let [page (-> (get-in request [:query-params :page])
                              Integer/valueOf)]
                 (-> (parse/parse-range 1 page)
                     json/generate-string))
-  
+
    :headers {"Content-Type" "application/json"}
    :status  200})
+
+(defn stream-ready [evt-chan context]
+  (dotimes [i 10]
+    (when-not (chan/closed? evt-chan)
+      (async/>!! evt-chan {:name "counter" :data i})
+      (Thread/sleep 1000)))
+  (async/close! evt-chan))
 
 #_(spit "./range2.json" (-> (parse/parse-range 1 10)
                           json/generate-string))
@@ -103,7 +121,21 @@
      ["/todo" :get list-todo]
      ["/todo" :post create-todo]
      ["/install-schema" :post install-schema]
-     ["/af" :get af-get]})
+     ["/af" :get af-get]
+     ["/counter" :get (sse/start-event-stream stream-ready)]})
+
+(defn fetch-first-page []
+  (->> (parse/parse-range 1 2)
+       (sort-by :time)
+       last
+       (clojure.pprint/pprint)))
+
+(defn looper []
+  (async/go-loop []
+    (fetch-first-page)
+    (async/<! (async/timeout 2000))
+    (recur)))
+#_(looper)
 
 (defn -main
   [& _]
@@ -143,7 +175,8 @@
                  http/dev-interceptors
                  http/create-server
                  http/start)))
-    (println "started: " port)))
+    (println "started: " port)
+    #_(looper)))
 
 (defn dev-main
   [& _]
