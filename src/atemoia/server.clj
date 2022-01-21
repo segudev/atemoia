@@ -96,13 +96,13 @@
 (defn af-get
   [_]
   {:body   (->> (:results @state)
-               (sort-by :time)
-               reverse
-               json/generate-string) 
+                (sort-by :time)
+                reverse
+                json/generate-string)
    #_(let [page (-> (get-in request [:query-params :page])
-                             Integer/valueOf)]
-                (-> (parse/parse-range 1 page)
-                    json/generate-string))
+                    Integer/valueOf)]
+       (-> (parse/parse-range 1 page)
+           json/generate-string))
 
    :headers {"Content-Type" "application/json"}
    :status  200})
@@ -114,8 +114,6 @@
       (Thread/sleep 1000)))
   (async/close! evt-chan))
 
-#_(spit "./range2.json" (-> (parse/parse-range 1 10)
-                          json/generate-string))
 (def routes
   `#{["/" :get index]
      ["/todo" :get list-todo]
@@ -124,18 +122,49 @@
      ["/af" :get af-get]
      ["/counter" :get (sse/start-event-stream stream-ready)]})
 
-(defn fetch-first-page []
-  (->> (parse/parse-range 1 2)
-       (sort-by :time)
-       last
-       (clojure.pprint/pprint)))
+  (defn fetch-first-page [state]
+    (clojure.pprint/pprint (str "Parsing @ "(java.time.LocalDateTime/now)))
+    (swap! state update-in [:results] conj (parse/parse-pages))
+    (clojure.pprint/pprint (first (first (:results @state)))))
 
-(defn looper []
-  (async/go-loop []
-    (fetch-first-page)
-    (async/<! (async/timeout 2000))
-    (recur)))
-#_(looper)
+  (defn update-state-results! [state]
+    (swap! state update-in [:results] conj (parse/parse-pages))
+    (println "state results updated"))
+
+  (defn parsing-loop []
+    (async/go-loop []
+      #_(update-state-results! state)             
+      (fetch-first-page state)
+      (async/<! (async/timeout 30000))
+      (recur)))
+  
+
+(comment
+
+(parsing-loop)
+
+  (clojure.pprint/pprint (str "aaaa "(java.time.LocalDateTime/now)))
+
+  (def s #{})
+  (def one {:id 1})
+  (def two {:id 2})
+  (conj s one two)
+
+  (def up {:res s})
+  (def &up (atom up))
+
+  up
+  &up
+  (update-in up [:res] conj one two)
+  (swap! &up (fn [x] (update-in x [:res] conj one two)))
+  (swap! &up update-in [:res] conj one two )
+@&up
+  (swap! &up update-in [:res] conj {:element 10 :id 3})
+  )
+
+
+
+
 
 (defn -main
   [& _]
@@ -161,7 +190,7 @@
                                                                       (.setExcludedAgentPatterns gzip-handler (make-array String 0))
                                                                       (.setGzipHandler context gzip-handler))
                                                                     context)}
-                  :results (parse/parse-range 1 11)}
+                  :results (parse/parse-pages 1 11)}
 
                  http/default-interceptors
                  (update ::http/interceptors
@@ -176,7 +205,7 @@
                  http/create-server
                  http/start)))
     (println "started: " port)
-    #_(looper)))
+    #_(parsing-looper)))
 
 (defn dev-main
   [& _]
@@ -188,3 +217,33 @@
       requiring-resolve
       (apply [:atemoia]))
   (-main))
+
+(comment
+  
+ (def time (java.time.LocalDate/now))
+(def time2 (java.time.LocalDate/now))
+
+
+(assert (= (java.time.LocalDateTime/parse "2022-01-17T00:00:00") 
+           (java.time.LocalDateTime/parse "2022-01-17T00:00:00")))
+
+(def s #{{:id 1 :t time}})
+  
+(spit "./art.json" 
+      (json/generate-string (parse/parse-pages 1 2)))
+
+
+  
+(def s1 (conj s {:id 2 :t time}))
+
+(contains? s1 (first s));=> true
+
+(count s1)
+
+(contains? (conj s1 {:id 1 :t time2}) (first s));=> true
+
+(assert (= 2 (count (conj s1 {:id 1 :t time2}))))
+  
+  (contains? s1 (first s))
+  
+)

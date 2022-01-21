@@ -3,7 +3,8 @@
             [hickory.select :as s]
             [clojure.string :as string]
             [clojure.core.async :as async])
-  (:import [java.time LocalDateTime]))
+  (:import [java.time LocalDate LocalTime]
+           [java.time.format DateTimeFormatter]))
 
 
 (def DOMAIN "https://fr.audiofanzine.com")
@@ -90,39 +91,47 @@
 (defn to-LocalTime [time]
   (try
     (if (string/starts-with? time "le")
-      (.atStartOfDay (java.time.LocalDate/parse (string/replace time #"le " "") (java.time.format.DateTimeFormatter/ofPattern "dd/MM/yy")))
-      (.atTime (java.time.LocalDate/now) (java.time.LocalTime/parse time (java.time.format.DateTimeFormatter/ofPattern "HH:mm"))))
+      (.atStartOfDay (LocalDate/parse (string/replace time #"le " "") (DateTimeFormatter/ofPattern "dd/MM/yy")))
+      (.atTime (LocalDate/now) (LocalTime/parse time (DateTimeFormatter/ofPattern "HH:mm"))))
     (catch Exception e (println (.getMessage e)))))
 
 (defn local-date-time [annonce]
   (to-LocalTime (hour annonce)))
 
-
-
 (defn parse-annonce [annonce]
   (zipmap [:id :img :title :link :price :time :place :summary]
           ((juxt id img title link price local-date-time place summary) annonce)))
-
-#_(defn assoc-hash [obj]
-    {:hash (hash obj) :annonce obj})
 
 (defn current-annonces [page]
   (mapv (partial parse-annonce)
         (extract-annonces (af-selling page))))
 
-; Synchronously parse reducing on page range
-(defn parse-range [start end]
-  (set (reduce (fn [res next]
-                 (concat res (current-annonces next)))
-               []
-               (range start end))))
+; Synchronously parse reducing on given range
+(defn parse-range
+  [start end]
+  (reduce (fn [res next]
+            (concat res (current-annonces next)))
+          []
+          (range start end)))
+
+(defn is-after? [an1 an2]
+  (.isAfter (:time an1) (:time an2)))
+
+(defn parse-pages
+  ([] (parse-pages 1 2))
+  ([start end]
+   (into (sorted-set-by is-after?) (parse-range start end))))
 
 (comment
-  
+  (defn comparator [an1 an2]
+    (.isAfter (:time an1) (:time an2)))
+
+  (into (sorted-set-by comparator) (parse-range 1 2))
+
   (clojure.pprint/pprint
-  (sort-by :time (parse-range 1 5)))
-  
-  )
+   (sort-by :time (parse-range 1 5)))
+
+  (parse-pages))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; (defn test-parser [parser]

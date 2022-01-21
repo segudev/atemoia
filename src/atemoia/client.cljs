@@ -48,9 +48,9 @@
 
 (defn start
   []
-  (some->> (js/document.getElementById "atemoia")
-           (rd/render [ui-root]))
-  (fetch-todos))
+  (when (fetch-todos) 
+    (some->> (js/document.getElementById "atemoia")
+           (rd/render [ui-root]))))
 
 (defn after-load
   []
