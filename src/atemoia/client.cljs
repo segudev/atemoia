@@ -19,14 +19,6 @@
       (.catch (fn [ex]
                 (swap! state assoc :error (ex-message ex))))))
 
-
-(defn item->li
-  [item]
-  (let [{:keys [:id :img :title :link :price :timeplace :summary]} item]
-  [:figure {:key id}
-   [:a {:href link} 
-    [:img {:src img}]]]))
-
 (defn map-idx 
   [idx item]
   (let [{:keys [:id :img :title :link :price :time :place :summary]} item]
@@ -48,9 +40,9 @@
 
 (defn start
   []
-  (when (fetch-todos) 
-    (some->> (js/document.getElementById "atemoia")
-           (rd/render [ui-root]))))
+  (some->> (js/document.getElementById "atemoia")
+           (rd/render [ui-root]))
+  (fetch-todos))
 
 (defn after-load
   []

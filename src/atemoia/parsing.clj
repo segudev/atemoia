@@ -114,36 +114,40 @@
           []
           (range start end)))
 
+(defn is-after-or-same? [an1 an2]
+  (let [t1 (:time an1)
+        t2 (:time an2)]
+    (if (= t1 t2)
+      true
+      (.isAfter (:time an1) (:time an2)))))
+
+(defn sorted-annonces
+  ([] (sorted-annonces 1 2))
+  ([start end]
+   (into (sorted-set-by is-after-or-same?) (parse-range start end))))
+
+(comment
 (defn is-after? [an1 an2]
   (.isAfter (:time an1) (:time an2)))
 
-(defn parse-pages
-  ([] (parse-pages 1 2))
-  ([start end]
-   (into (sorted-set-by is-after?) (parse-range start end))))
+  (into (sorted-set-by is-after?) (parse-range 1 2))
 
-(comment
-  (defn comparator [an1 an2]
-    (.isAfter (:time an1) (:time an2)))
+  ;;bug-> sorted-set is evicting 2/3 of annonces, why?
 
-  (into (sorted-set-by comparator) (parse-range 1 2))
+  (def r (parse-range 1 11))
 
-  (clojure.pprint/pprint
-   (sort-by :time (parse-range 1 5)))
+  (count r);=> 200
+  (count (into #{} r));=> 200
+  (count (into (sorted-set-by is-after?) r)); => 34!
+  ;problem: any equal keys are treated as with conj
+  ;need to manage this case!
 
-  (parse-pages))
+  (defn is-after-or-same? [an1 an2]
+    (let [t1 (:time an1)
+          t2 (:time an2)]
+      (if (= t1 t2)
+        true
+        (.isAfter (:time an1) (:time an2)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; (defn test-parser [parser]
-;;   (map #(parser %)
-;;        (extract-annonces (af-selling 0))))
-;; (test-parser place)
-
-;;(def now (.atZone (java.time.Instant/now ) (java.time.ZoneId/of "Europe/Paris")))
-
-;;(def testing (extract-annonces af-selling-main-page))
-;;(map #(id %) testing)
-;;(map #(img %) testing)
-;;(map #(title %) testing)
-;;(map #(rel-url %) testing)
-;;(map #(price %) testing)
+  (count (into (sorted-set-by is-after-or-same?) r)); => 200, bingo!
+  )
